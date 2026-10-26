@@ -1,0 +1,55 @@
+# 驗證紀錄
+
+日期：2026-10-26。
+
+## 目標及建置
+
+- 目標：osu!lazer **2026.1005.0-lazer** 正式版。
+- 編譯參考：該正式版 Linux 發佈包內的 `osu.Game.dll`、`osu.Framework.dll` 等組件，不是猜測的新版本 NuGet API。
+- 官方完整發佈包 SHA-256 已核對 release manifest：
+  `3ae026e4ee6a7f5f994365fbcef4c8030d400acef06df26279b6f6e0f4e0cc0f`。
+- 使用專案內的 .NET SDK 10.0.403 編譯。
+- Release 建置：零警告、零錯誤。
+- 安裝包只包含自己的 ruleset DLL 及說明文件，不附帶遊戲／框架組件。
+
+## 下載器測試
+
+12 項離線測試及 1 項真實網路測試：
+
+- 譜面集 ID／網址解析及 full／novideo 路徑。
+- 重新導向後保留完整 `.osz`，請求不包含 Authorization 或 Cookie。
+- Sayobot HTTPS 節點及非標準埠可用；外部或 HTTP 重新導向被拒絕。
+- HTML 錯誤頁、截斷檔案、錯誤譜面集 ID、舊版本 MD5、沒有 `.osu` 的 ZIP 均被拒絕。
+- 使用者取消會清除暫存檔。
+- HTTP 404 保留為可回退的下載失敗。
+- 既有目的檔案不會被覆寫或刪除。
+- 真實 Sayobot 下載：譜面集 **41823**，**2,872,542 bytes**、6 個 ZIP 項目、2 個 `.osu` 難度，完整下載及內容檢查成功；測試後刪除暫存檔。
+
+## 使用正式版組件的整合測試
+
+使用 `TestRunHeadlessGameHost`、臨時 Realm 資料庫和 `DummyAPIAccess`，不讀取玩家資料夾或登入資料。Sayobot 傳輸使用真實網路；官方 API 以模擬服務取代。
+
+通過的完整流程：
+
+```text
+透過 ruleset 圖示載入服務
+→ 真正呼叫 BeatmapModelDownloader.Download()
+→ 公開 DownloadBegan 事件觸發
+→ 原請求被取消，狀態為 Failed
+→ Sayobot 下載成功
+→ 真正的 BeatmapManager 匯入臨時 Realm
+→ 可透過譜面集 ID 查到兩個難度
+```
+
+另外使用不存在的鏡像譜面集 ID 驗證官方回退：共兩次原生下載請求，第一次狀態 `Failed`，第二次為 `Waiting`，沒有被再次接管或產生回退循環；最後取消模擬請求並清理資料。
+
+整合測試也找出並修正：部分舊譜面缺少線上 ID，匯入後需補上已知譜面集 ID，才能讓原生可用狀態追蹤器識別。
+
+## 尚未驗證的範圍
+
+- 尚未在有視窗的玩家用戶端逐一操作設定頁、通知列及所有下載入口。
+- 尚未逐一測試多人／排名遊戲、自動更新入口及 Windows／macOS 執行。
+- 原生按鈕內的下載進度不會與 Sayobot 工作同步；使用獨立通知顯示進度。
+- 匯入更新流程使用公開 `ImportAsUpdate`，尚未用含分數及收藏的既有玩家資料庫測試。
+
+使用者可先在設定的手動下載欄位輸入 `41823`，確認自己的平台能下載及匯入，再測試原生下載入口。

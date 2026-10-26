@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseAppHost>false</UseAppHost>
+    <LazerReferenceDirectory>$(MSBuildThisFileDirectory)../../.tools/lazer-2026.1005.0/usr/bin</LazerReferenceDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../osu.Game.Rulesets.Sayobot/osu.Game.Rulesets.Sayobot.csproj" />
+    <PackageReference Include="ppy.osu.Framework.SourceGeneration" Version="2025.1121.1" PrivateAssets="all" />
+    <Reference Include="$(LazerReferenceDirectory)/*.dll"
+               Exclude="$(LazerReferenceDirectory)/System.*.dll;$(LazerReferenceDirectory)/Microsoft.CSharp.dll;$(LazerReferenceDirectory)/Microsoft.VisualBasic*.dll;$(LazerReferenceDirectory)/Microsoft.Win32*.dll;$(LazerReferenceDirectory)/netstandard.dll;$(LazerReferenceDirectory)/mscorlib.dll;$(LazerReferenceDirectory)/WindowsBase.dll" />
+    <None Include="$(LazerReferenceDirectory)/*.so"
+          Exclude="$(LazerReferenceDirectory)/libSystem.*.so;$(LazerReferenceDirectory)/libhost*.so;$(LazerReferenceDirectory)/libcoreclr*.so;$(LazerReferenceDirectory)/libclr*.so;$(LazerReferenceDirectory)/libmscord*.so"
+          Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
