@@ -1,0 +1,62 @@
+name: Publish v0.2.2
+
+on:
+  push:
+    tags:
+      - v0.2.2
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: 10.0.403
+
+      - name: Install extraction tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes squashfs-tools
+
+      - name: Build, test and package
+        run: ./scripts/build.sh
+
+      - name: Verify the release version and checksums
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import xml.etree.ElementTree as ET
+          version = ET.parse("osu.Game.Rulesets.Sayobot/osu.Game.Rulesets.Sayobot.csproj").findtext("PropertyGroup/Version")
+          if os.environ["RELEASE_TAG"] != f"v{version}":
+              raise SystemExit("The release tag does not match the project version.")
+          PY
+          cd artifacts
+          sha256sum osu.Game.Rulesets.Sayobot.dll osu-lazer-Sayobot-Downloader-0.2.2-lazer-2026.1005.0.zip > SHA256SUMS
+          sha256sum --check SHA256SUMS
+
+      - name: Upload assets and publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            artifacts/osu.Game.Rulesets.Sayobot.dll \
+            artifacts/osu-lazer-Sayobot-Downloader-0.2.2-lazer-2026.1005.0.zip \
+            artifacts/SHA256SUMS \
+            --verify-tag --draft \
+            --title "osu!lazer Sayobot Downloader $RELEASE_TAG" \
+            --notes-file docs/releases/v0.2.2.md
+          gh release edit "$RELEASE_TAG" --draft=false --latest
