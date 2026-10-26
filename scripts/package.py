@@ -13,7 +13,7 @@ output = root / "artifacts"
 output.mkdir(exist_ok=True)
 target = output / assembly.name
 shutil.copy2(assembly, target)
-archive = output / "SayobotDownload-0.2.0-lazer-2026.1005.0.zip"
+archive = output / "SayobotDownload-0.2.1-lazer-2026.1005.0.zip"
 with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
     package.write(target, target.name)
     package.write(root / "README.md", "README.md")

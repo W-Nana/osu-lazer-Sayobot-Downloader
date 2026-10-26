@@ -5,6 +5,7 @@ using osu.Framework.Logging;
 using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
 using osu.Game.Database;
+using osu.Game.Extensions;
 using osu.Game.Online.API;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Notifications;
@@ -12,6 +13,7 @@ using osu.Game.Rulesets.Sayobot.Configuration;
 using osu.Game.Rulesets.Sayobot.Download;
 using osu.Game.Rulesets.Sayobot.Localisation;
 using static osu.Game.Rulesets.Sayobot.Localisation.SayobotStrings;
+using NativeNotificationsStrings = osu.Game.Localisation.NotificationsStrings;
 
 namespace osu.Game.Rulesets.Sayobot.UI;
 
@@ -22,6 +24,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
     private static readonly object installationLock = new();
     private readonly Dictionary<int, Job> jobs = [];
     private readonly HashSet<int> officialFallbacks = [];
+    private readonly List<NativeCancellation> nativeCancellations = [];
     private readonly SemaphoreSlim downloadSlots = new(2);
     private readonly CancellationTokenSource lifetime = new();
     private SayobotConfigManager config = null!;
@@ -83,8 +86,69 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
         if (!jobs.ContainsKey(setId))
             start(request.Model, request);
         else
-            request.Cancel();
+            cancelNativeDownload(request);
     });
+
+    private void cancelNativeDownload(ArchiveDownloadRequest<IBeatmapSetInfo> request)
+    {
+        if (notifications != null)
+        {
+            // The native downloader does not expose its notification on the request. Match its
+            // public localisable caption, preserving identity across UI language changes.
+            var caption = NativeNotificationsStrings.Downloading(request.Model.GetDisplayString());
+            var existing = notifications.AllNotifications.OfType<ProgressNotification>()
+                                        .Where(n => !n.WasClosed && n.Text == caption).ToArray();
+            var ongoing = existing.Where(n => n.Ongoing).ToArray();
+            // Identical display titles can be ambiguous. Leave those notifications alone.
+            if (ongoing.Length <= 1)
+                nativeCancellations.Add(new NativeCancellation(caption, ongoing.SingleOrDefault(), existing.ToHashSet()));
+        }
+
+        request.Cancel();
+        dismissNativeCancellations();
+    }
+
+    protected override void Update()
+    {
+        base.Update();
+        dismissNativeCancellations();
+    }
+
+    private void dismissNativeCancellations()
+    {
+        if (notifications == null || nativeCancellations.Count == 0)
+            return;
+
+        // NotificationOverlay.Post() can be deferred, for example during gameplay. Keep tracking
+        // until the cancelled original appears, even if the mirror job has already finished.
+        var displayed = notifications.AllNotifications.OfType<ProgressNotification>().ToArray();
+        foreach (var cancellation in nativeCancellations.ToArray())
+        {
+            var notification = cancellation.Notification;
+            if (notification == null)
+            {
+                var candidates = displayed.Where(n => !n.WasClosed
+                    && n.State == ProgressNotificationState.Cancelled && n.Text == cancellation.Caption
+                    && !cancellation.PreviousNotifications.Contains(n)).ToArray();
+                if (candidates.Length > 1)
+                {
+                    nativeCancellations.Remove(cancellation);
+                    continue;
+                }
+                notification = candidates.SingleOrDefault();
+            }
+
+            if (notification == null)
+                continue;
+            if (notification.State == ProgressNotificationState.Cancelled)
+            {
+                notification.Read = true;
+                notification.Close(false);
+            }
+            if (notification.WasClosed || notification.State == ProgressNotificationState.Completed)
+                nativeCancellations.Remove(cancellation);
+        }
+    }
 
     private void start(IBeatmapSetInfo model, ArchiveDownloadRequest<IBeatmapSetInfo>? originalRequest)
     {
@@ -127,7 +191,8 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
         };
 
         jobs.Add(setId, job);
-        originalRequest?.Cancel();
+        if (originalRequest != null)
+            cancelNativeDownload(originalRequest);
         notifications?.Post(notification);
         _ = Task.Run(() => runAsync(job));
     }
@@ -203,7 +268,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
         {
             needsOfficialFallback = !lifetime.IsCancellationRequested && job.FallbackToOfficial
                                     && Volatile.Read(ref job.ImportStarted) == 0;
-            Logger.Error(e, $"Sayobot Download: beatmap set {setId} failed.");
+            logLocalFailure(e, $"Sayobot Download: beatmap set {setId} failed.");
             bool fallback = needsOfficialFallback;
             post(() =>
             {
@@ -257,7 +322,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
         catch (Exception e)
         {
             officialFallbacks.Remove(setId);
-            Logger.Error(e, $"Sayobot Download: could not start official fallback for {setId}.");
+            logLocalFailure(e, $"Sayobot Download: could not start official fallback for {setId}.");
             notify(Get(SayobotString.OfficialStartFailed, setId));
         }
     }
@@ -270,6 +335,11 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
 
     private void notify(LocalisableString message) => notifications?.Post(new SimpleNotification { Text = message });
 
+    // Logger.Error() forwards exceptions to lazer's notification and Sentry listeners.
+    // Retain diagnostics in runtime.log without emitting an event to those listeners.
+    private static void logLocalFailure(Exception exception, string description)
+        => Logger.Log($"{description}\n{exception}", level: LogLevel.Verbose, outputToListeners: false);
+
     private static bool isMd5(string? hash)
         => hash is { Length: 32 } && hash.All(Uri.IsHexDigit);
 
@@ -281,6 +351,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
             if (downloader != null)
                 downloader.DownloadBegan -= downloadBegan;
             lifetime.Cancel();
+            nativeCancellations.Clear();
         }
         base.Dispose(isDisposing);
     }
@@ -289,6 +360,9 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
     {
         public void Report(DownloadProgress value) => report(value);
     }
+
+    private sealed record NativeCancellation(LocalisableString Caption, ProgressNotification? Notification,
+                                              HashSet<ProgressNotification> PreviousNotifications);
 
     private sealed class Job(IBeatmapSetInfo originalModel, BeatmapSetInfo? updateSnapshot,
                              DownloadSpecification specification, IReadOnlyDictionary<string, int> beatmapIds, bool useSystemProxy,
