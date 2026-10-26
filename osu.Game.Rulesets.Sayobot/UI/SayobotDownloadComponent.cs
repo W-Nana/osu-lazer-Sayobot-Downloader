@@ -62,8 +62,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
         base.LoadComplete();
         config = (SayobotConfigManager)configCache.GetConfigFor(ruleset)!;
         downloader.DownloadBegan += downloadBegan;
-        notify(Get(SayobotString.Loaded));
-        Logger.Log("Sayobot Download: subscribed to the public BeatmapModelDownloader.DownloadBegan event.");
+        Logger.Log($"{SayobotRuleset.ProjectName}: subscribed to the public BeatmapModelDownloader.DownloadBegan event.");
     }
 
     public void DownloadManually(int setId) => Schedule(() =>
@@ -254,7 +253,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
                 });
             }
 
-            Logger.Log($"Sayobot Download: imported beatmap set {setId}.");
+            Logger.Log($"{SayobotRuleset.ProjectName}: imported beatmap set {setId}.");
         }
         catch (OperationCanceledException) when (job.Cancellation.IsCancellationRequested)
         {
@@ -268,7 +267,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
         {
             needsOfficialFallback = !lifetime.IsCancellationRequested && job.FallbackToOfficial
                                     && Volatile.Read(ref job.ImportStarted) == 0;
-            logLocalFailure(e, $"Sayobot Download: beatmap set {setId} failed.");
+            logLocalFailure(e, $"{SayobotRuleset.ProjectName}: beatmap set {setId} failed.");
             bool fallback = needsOfficialFallback;
             post(() =>
             {
@@ -322,7 +321,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
         catch (Exception e)
         {
             officialFallbacks.Remove(setId);
-            logLocalFailure(e, $"Sayobot Download: could not start official fallback for {setId}.");
+            logLocalFailure(e, $"{SayobotRuleset.ProjectName}: could not start official fallback for {setId}.");
             notify(Get(SayobotString.OfficialStartFailed, setId));
         }
     }

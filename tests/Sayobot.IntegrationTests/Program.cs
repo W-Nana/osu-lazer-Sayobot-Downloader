@@ -26,7 +26,7 @@ try
     if (game.Success)
     {
         Logger.Flush();
-        string failureMessage = $"Sayobot Download: beatmap set {int.MaxValue} failed.";
+        string failureMessage = $"{SayobotRuleset.ProjectName}: beatmap set {int.MaxValue} failed.";
         string log = File.ReadAllText(Logger.Storage.GetFullPath(Logger.GetLogger(LoggingTarget.Runtime).Filename));
         if (!log.Contains(failureMessage) || forwardedLogs.Any(e => e.Message.Contains(failureMessage)))
             throw new Exception("Mirror failure must remain in the local runtime log without reaching Logger.NewEntry / Sentry listeners.");

@@ -118,10 +118,10 @@ public static class SayobotStrings
             "請輸入有效的正整數譜面集 ID 或 osu! 譜面集連結。",
             "有効な正の整数のビートマップセット ID または osu! のセットリンクを入力してください。"),
         [SayobotString.Loaded] = new(
-            "Sayobot Download loaded. Switch back to osu! / taiko / catch / mania and download as usual.",
-            "Sayobot Download 已加载。可切回 osu!／taiko／catch／mania，照常点击下载。",
-            "Sayobot Download 已載入。可切回 osu!／taiko／catch／mania，照常按下載。",
-            "Sayobot Download を読み込みました。osu! / taiko / catch / mania に戻り、通常どおりダウンロードできます。"),
+            "osu!lazer Sayobot Downloader loaded. Switch back to osu! / taiko / catch / mania and download as usual.",
+            "osu!lazer Sayobot Downloader 已加载。可切回 osu!／taiko／catch／mania，照常点击下载。",
+            "osu!lazer Sayobot Downloader 已載入。可切回 osu!／taiko／catch／mania，照常按下載。",
+            "osu!lazer Sayobot Downloader を読み込みました。osu! / taiko / catch / mania に戻り、通常どおりダウンロードできます。"),
         [SayobotString.AlreadyQueued] = new(
             "Sayobot: beatmap set {0} is already queued.",
             "Sayobot：谱面集 {0} 已在下载队列中。",

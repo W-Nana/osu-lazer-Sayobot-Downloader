@@ -23,6 +23,8 @@ namespace osu.Game.Rulesets.Sayobot;
 
 public sealed partial class SayobotRuleset : Ruleset
 {
+    public const string ProjectName = "osu!lazer Sayobot Downloader";
+
     public SayobotRuleset()
     {
         RulesetInfo.OnlineID = -1;
@@ -31,11 +33,11 @@ public sealed partial class SayobotRuleset : Ruleset
     }
 
     public override string ShortName => "sayobot-download";
-    public override string Description => "Sayobot Download";
+    public override string Description => ProjectName;
     public override string RulesetAPIVersionSupported => CURRENT_RULESET_API_VERSION;
     public override IEnumerable<Mod> GetModsFor(ModType type) => [];
     public override DrawableRuleset CreateDrawableRulesetWith(IBeatmap beatmap, IReadOnlyList<Mod>? mods = null)
-        => throw new NotSupportedException("Choose osu!, taiko, catch or mania to play; Sayobot Download only provides downloads.");
+        => throw new NotSupportedException($"Choose osu!, taiko, catch or mania to play; {ProjectName} only provides downloads.");
     public override IBeatmapConverter CreateBeatmapConverter(IBeatmap beatmap) => new NoBeatmapConverter(beatmap, this);
     public override DifficultyCalculator CreateDifficultyCalculator(IWorkingBeatmap beatmap) => new NoDifficultyCalculator(RulesetInfo, beatmap);
     public override IRulesetFilterCriteria CreateRulesetFilterCriteria() => new NoBeatmapsFilter();

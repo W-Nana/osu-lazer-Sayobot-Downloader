@@ -1,77 +1,77 @@
-# 驗證紀錄
+# Validation Record
 
-日期：2026-10-26。
+Date: 2026-10-26.
 
-## 目標及建置
+## Target and Build
 
-- 目標：osu!lazer **2026.1005.0-lazer** 正式版。
-- 編譯參考：該正式版 Linux 發佈包內的 `osu.Game.dll`、`osu.Framework.dll` 等組件，不是猜測的新版本 NuGet API。
-- 官方完整發佈包 SHA-256 已核對 release manifest：
-  `3ae026e4ee6a7f5f994365fbcef4c8030d400acef06df26279b6f6e0f4e0cc0f`。
-- 使用專案內的 .NET SDK 10.0.403 編譯。
-- Release 建置：零警告、零錯誤。
-- 安裝包只包含自己的 ruleset DLL 及說明文件，不附帶遊戲／框架組件。
+- Target: **osu!lazer 2026.1005.0-lazer** stable.
+- Reference assemblies: `osu.Game.dll`, `osu.Framework.dll`, and other assemblies from that release's Linux package.
+- The complete official release package was verified against its release manifest using SHA-256:
+  `3ae026e4ee6a7f5f994365fbcef4c8030d400acef06df26279b6f6e0f4e0cc0f`.
+- Built with the workspace's .NET SDK 10.0.403.
+- Release build: zero warnings and zero errors.
+- The installation package contains only this ruleset's DLL and documentation, without game or framework assemblies.
 
-## 多語言測試（0.2.0）
+## Localisation Tests (0.2.0)
 
-使用目標正式版的 `LocalisationManager` 執行 6 項本地化測試，全部通過：
+Six tests passed using `LocalisationManager` from the targeted stable release:
 
-- 全部 35 個訊息在英文、簡體中文、繁體中文及日文中均有翻譯，格式變數可正常展開。
-- 驗證 `zh`、`zh-Hans`、`zh-Hant`、台灣／香港／澳門及日文地區變體；明確指定的中文書寫系統優先於地區。
-- 未支援語言回退英文，保留該語系的數字格式；框架尚未提供語言資料時也可顯示英文。
-- 同一個已綁定的通知文字及其內嵌錯誤原因，在四種語言間切換時立即更新。
-- HTTP 404／410、其他 HTTP 狀態、連線失敗、逾時、無效譜面包、檔案錯誤、匯入失敗和未知錯誤均可顯示翻譯後的說明，原始例外保留於日誌。
-- 訊息相等性及參數變更可正常識別，下載進度及階段更新不會被忽略。
+- All 35 catalogued messages have English, Simplified Chinese, Traditional Chinese, and Japanese translations with working format placeholders.
+- Language selection covers `zh`, `zh-Hans`, `zh-Hant`, Taiwan, Hong Kong, Macau, and Japanese regional variants. Explicit Chinese script selection takes precedence over the region.
+- Unsupported languages fall back to English while retaining local number formatting. English also works before a localisation store is available.
+- Existing bound notification text and nested error descriptions update immediately when switching between the four languages.
+- Translated error descriptions cover HTTP 404/410, other HTTP statuses, connection failures, timeouts, invalid archives, file errors, import failures, and unexpected errors. Original diagnostics remain available in the logs.
+- String equality and argument changes behave correctly, allowing progress and download stage updates to be displayed.
 
-## 下載器測試
+## Downloader Tests
 
-12 項離線測試及 1 項真實網路測試：
+Twelve offline tests and one live network test passed:
 
-- 譜面集 ID／網址解析及 full／novideo 路徑。
-- 重新導向後保留完整 `.osz`，請求不包含 Authorization 或 Cookie。
-- Sayobot HTTPS 節點及非標準埠可用；外部或 HTTP 重新導向被拒絕。
-- HTML 錯誤頁、截斷檔案、錯誤譜面集 ID、舊版本 MD5、沒有 `.osu` 的 ZIP 均被拒絕。
-- 使用者取消會清除暫存檔。
-- HTTP 404 保留為可回退的下載失敗。
-- 既有目的檔案不會被覆寫或刪除。
-- 真實 Sayobot 下載：譜面集 **41823**，**2,872,542 bytes**、6 個 ZIP 項目、2 個 `.osu` 難度，完整下載及內容檢查成功；測試後刪除暫存檔。
+- Beatmap set ID and URL parsing, including full and no-video download routes.
+- Complete `.osz` downloads through redirects, without Authorization or Cookie headers.
+- HTTPS Sayobot nodes and nonstandard ports are accepted; external and HTTP redirects are rejected.
+- HTML error pages, truncated downloads, incorrect beatmap set IDs, stale MD5 checksums, and ZIP archives without `.osu` files are rejected.
+- User cancellation removes partial temporary files.
+- HTTP 404 remains a recoverable download failure.
+- Existing destination files are never overwritten or deleted.
+- Live Sayobot download: beatmap set **41823**, **2,872,542 bytes**, six ZIP entries, and two `.osu` difficulties. Download and archive validation succeeded, and temporary files were removed afterward.
 
-## 使用正式版組件的整合測試
+## Integration Test with Stable Release Assemblies
 
-使用 `TestRunHeadlessGameHost`、臨時 Realm 資料庫和 `DummyAPIAccess`，不讀取玩家資料夾或登入資料。Sayobot 傳輸使用真實網路；官方 API 以模擬服務取代。
+Uses `TestRunHeadlessGameHost`, a temporary Realm database, and `DummyAPIAccess`. No player data or login credentials are used. Sayobot transfers use the real network; the official API is mocked.
 
-通過的完整流程：
+The following workflow passed:
 
 ```text
-透過 ruleset 圖示載入服務
-→ 真正呼叫 BeatmapModelDownloader.Download()
-→ 公開 DownloadBegan 事件觸發
-→ 原請求被取消，狀態為 Failed
-→ Sayobot 下載成功
-→ 真正的 BeatmapManager 匯入臨時 Realm
-→ 可透過譜面集 ID 查到兩個難度
+Load the service through the ruleset icon
+→ Call the real BeatmapModelDownloader.Download() API
+→ Receive the public DownloadBegan event
+→ Cancel the original request, leaving it in the Failed state
+→ Complete the Sayobot download
+→ Import through the real BeatmapManager into the temporary Realm database
+→ Find both difficulties by beatmap set ID
 ```
 
-另外使用不存在的鏡像譜面集 ID 驗證官方回退：共兩次原生下載請求，第一次狀態 `Failed`，第二次為 `Waiting`，沒有被再次接管或產生回退循環；最後取消模擬請求並清理資料。
+Official fallback was tested with a missing mirror set. Two native download requests were created: the first reached `Failed`, and the fallback remained `Waiting` under the mocked API. The fallback bypassed interception without entering a loop. The mocked request was then cancelled and temporary data cleaned up.
 
-整合測試也找出並修正：部分舊譜面缺少線上 ID，匯入後需補上已知譜面集 ID，才能讓原生可用狀態追蹤器識別。
+This test also identified an issue with older beatmaps that omit online IDs. The importer now fills in known beatmap set IDs so native availability tracking can recognise those imports.
 
-## 取消通知及錯誤回報（0.2.1）
+## Cancellation Notifications and Error Reporting (0.2.1)
 
-擴充上述整合測試，使用實際原生下載器建立通知，並以記錄用 `INotificationOverlay` 驗證：
+The integration test was extended to use notifications created by the real native downloader and a recording `INotificationOverlay`:
 
-- 原生通知延後 250 毫秒才出現在公開通知集合中，接管後仍會自動關閉並標為已讀。
-- 鏡像缺圖時，該次接管造成的取消通知也會關閉。
-- 正式回退請求的原生通知仍持續顯示；之前已存在的同標題取消通知及其他元件的取消通知均保持原狀。
-- 真實鏡像下載失敗的完整診斷仍可從本地 runtime 日誌讀取，`Logger.NewEntry` 監聽器沒有收到該筆日誌；因此不會經此路徑觸發錯誤通知或 Sentry。
+- A native notification was withheld from the public notification collection for 250 milliseconds. It was still closed and marked as read after interception.
+- The intercepted cancellation notification was also closed when the mirror was missing the requested set.
+- The actual official fallback notification remained visible. Pre-existing cancellation notifications with the same title and notifications from other components were preserved.
+- Complete diagnostics from a real mirror download failure remained in the local runtime log. `Logger.NewEntry` listeners did not receive that entry, preventing an error notification or Sentry event through that logging path.
 
-所有項目通過。通知清理只使用公開集合、文字描述及 `Close(false)`，不讀取私有欄位、不替換原生通知回呼；無法唯一識別的同標題通知會保留。尚未在有視窗的客戶端量測通知閃現時間。
+All checks passed. Notification cleanup uses the public collection, text descriptors, and `Close(false)`, without accessing private fields or replacing the native notification callback. Notifications are preserved when matching titles cannot be identified unambiguously. The duration of any brief notification flash has not been measured in a windowed client.
 
-## 尚未驗證的範圍
+## Remaining Verification and Known Limitations
 
-- 尚未在有視窗的玩家用戶端逐一操作設定頁、通知列及所有下載入口。
-- 尚未逐一測試多人／排名遊戲、自動更新入口及 Windows／macOS 執行。
-- 原生按鈕內的下載進度不會與 Sayobot 工作同步；使用獨立通知顯示進度。
-- 匯入更新流程使用公開 `ImportAsUpdate`，尚未用含分數及收藏的既有玩家資料庫測試。
+- Settings, notification layouts, and every download entry point have not been manually checked in a windowed player client.
+- Multiplayer, ranked play, automatic updates, and Windows/macOS execution have not been individually verified.
+- Native download buttons do not show Sayobot's progress; progress appears in separate notifications.
+- Updates use the public `ImportAsUpdate` API, but have not been tested against an existing player database containing scores and collections.
 
-使用者可先在設定的手動下載欄位輸入 `41823`，確認自己的平台能下載及匯入，再測試原生下載入口。
+To check downloading and importing on your platform, enter `41823` in the manual download field before trying native download entry points.

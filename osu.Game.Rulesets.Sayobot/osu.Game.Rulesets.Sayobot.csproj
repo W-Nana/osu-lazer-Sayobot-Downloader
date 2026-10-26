@@ -4,8 +4,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>osu.Game.Rulesets.Sayobot</AssemblyName>
+    <AssemblyTitle>osu!lazer Sayobot Downloader</AssemblyTitle>
+    <Product>osu!lazer Sayobot Downloader</Product>
+    <Description>Download and import osu! beatmaps from Sayobot within osu!lazer.</Description>
     <RootNamespace>osu.Game.Rulesets.Sayobot</RootNamespace>
-    <Version>0.2.1</Version>
+    <Version>0.2.2</Version>
     <PpyOsuGameVersion Condition="'$(PpyOsuGameVersion)' == ''">2026.916.0</PpyOsuGameVersion>
     <LazerReferenceDirectory Condition="'$(LazerReferenceDirectory)' == ''">$(MSBuildThisFileDirectory)../.tools/lazer-2026.1005.0/usr/bin</LazerReferenceDirectory>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
