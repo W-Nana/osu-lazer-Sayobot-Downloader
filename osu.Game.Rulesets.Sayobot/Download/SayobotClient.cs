@@ -36,7 +36,7 @@ internal sealed class SayobotClient : IDisposable
     internal SayobotClient(HttpMessageHandler handler)
     {
         client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("SayobotRuleset/0.1");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("SayobotRuleset/0.2");
     }
 
     public static Uri CreateDownloadUri(int setId, bool noVideo)

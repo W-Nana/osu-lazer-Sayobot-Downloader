@@ -11,4 +11,5 @@ export DOTNET_NOLOGO=1
 python3 scripts/prepare-references.py
 "$task_dotnet" build osu.Game.Rulesets.Sayobot/osu.Game.Rulesets.Sayobot.csproj -c Release --nologo
 "$task_dotnet" run --project tests/Sayobot.Tests -c Release -- "$@"
+"$task_dotnet" run --project tests/Sayobot.LocalisationTests -c Release
 python3 scripts/package.py

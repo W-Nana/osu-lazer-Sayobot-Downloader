@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseAppHost>false</UseAppHost>
+    <LazerReferenceDirectory>$(MSBuildThisFileDirectory)../../.tools/lazer-2026.1005.0/usr/bin</LazerReferenceDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../osu.Game.Rulesets.Sayobot/osu.Game.Rulesets.Sayobot.csproj" />
+    <Reference Include="$(LazerReferenceDirectory)/*.dll"
+               Exclude="$(LazerReferenceDirectory)/System.*.dll;$(LazerReferenceDirectory)/Microsoft.CSharp.dll;$(LazerReferenceDirectory)/Microsoft.VisualBasic*.dll;$(LazerReferenceDirectory)/Microsoft.Win32*.dll;$(LazerReferenceDirectory)/netstandard.dll;$(LazerReferenceDirectory)/mscorlib.dll;$(LazerReferenceDirectory)/WindowsBase.dll" />
+  </ItemGroup>
+</Project>

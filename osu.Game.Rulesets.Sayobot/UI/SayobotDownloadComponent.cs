@@ -1,8 +1,8 @@
-using System.Globalization;
 using System.Runtime.CompilerServices;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Logging;
+using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
 using osu.Game.Database;
 using osu.Game.Online.API;
@@ -10,6 +10,8 @@ using osu.Game.Overlays;
 using osu.Game.Overlays.Notifications;
 using osu.Game.Rulesets.Sayobot.Configuration;
 using osu.Game.Rulesets.Sayobot.Download;
+using osu.Game.Rulesets.Sayobot.Localisation;
+using static osu.Game.Rulesets.Sayobot.Localisation.SayobotStrings;
 
 namespace osu.Game.Rulesets.Sayobot.UI;
 
@@ -57,7 +59,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
         base.LoadComplete();
         config = (SayobotConfigManager)configCache.GetConfigFor(ruleset)!;
         downloader.DownloadBegan += downloadBegan;
-        notify("Sayobot Download 已載入。可切回 osu!／taiko／catch／mania，照常按下載。");
+        notify(Get(SayobotString.Loaded));
         Logger.Log("Sayobot Download: subscribed to the public BeatmapModelDownloader.DownloadBegan event.");
     }
 
@@ -89,7 +91,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
         int setId = model.OnlineID;
         if (jobs.ContainsKey(setId))
         {
-            notify($"Sayobot：譜面集 {setId} 已在下載佇列中。");
+            notify(Get(SayobotString.AlreadyQueued, setId));
             return;
         }
 
@@ -113,8 +115,8 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
             config.Get<bool>(SayobotSetting.FallbackToOfficial),
             CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token));
         var notification = job.Notification;
-        notification.Text = $"Sayobot：等待下載譜面集 {setId}";
-        notification.CompletionText = $"Sayobot：譜面集 {setId} 已匯入";
+        notification.Text = Get(SayobotString.Queued, setId);
+        notification.CompletionText = Get(SayobotString.Completed, setId);
         notification.CancelRequested = () =>
         {
             // ImportAsUpdate has no cancellation-token parameter. Once import begins, let it finish.
@@ -143,7 +145,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
             post(() =>
             {
                 job.Notification.State = ProgressNotificationState.Active;
-                job.Notification.Text = $"Sayobot：正在下載譜面集 {setId}";
+                job.Notification.Text = Get(SayobotString.Downloading, setId);
             });
 
             using var client = new SayobotClient(job.UseSystemProxy);
@@ -152,16 +154,14 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
                 if (!job.Notification.Ongoing)
                     return;
                 job.Notification.Progress = p.TotalBytes is > 0 ? (float)p.Bytes / p.TotalBytes.Value : 0;
-                string received = (p.Bytes / 1048576d).ToString("0.0", CultureInfo.InvariantCulture);
-                string total = p.TotalBytes is > 0
-                    ? $" / {(p.TotalBytes.Value / 1048576d).ToString("0.0", CultureInfo.InvariantCulture)}"
-                    : string.Empty;
-                job.Notification.Text = $"Sayobot：譜面集 {setId}（{received}{total} MiB）";
+                job.Notification.Text = p.TotalBytes is > 0
+                    ? Get(SayobotString.DownloadProgressWithTotal, setId, p.Bytes / 1048576d, p.TotalBytes.Value / 1048576d)
+                    : Get(SayobotString.DownloadProgress, setId, p.Bytes / 1048576d);
             })), job.Cancellation.Token).ConfigureAwait(false);
 
             Interlocked.Exchange(ref job.ImportStarted, 1);
             job.Cancellation.Token.ThrowIfCancellationRequested();
-            post(() => job.Notification.Text = $"Sayobot：正在匯入譜面集 {setId}");
+            post(() => job.Notification.Text = Get(SayobotString.Importing, setId));
 
             List<Live<BeatmapSetInfo>> importedModels;
             if (job.UpdateSnapshot != null)
@@ -195,7 +195,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
         {
             post(() =>
             {
-                job.Notification.Text = $"Sayobot：已取消譜面集 {setId}";
+                job.Notification.Text = Get(SayobotString.Cancelled, setId);
                 job.Notification.State = ProgressNotificationState.Cancelled;
             });
         }
@@ -207,9 +207,10 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
             bool fallback = needsOfficialFallback;
             post(() =>
             {
-                job.Notification.Text = $"Sayobot：譜面集 {setId} 失敗（{e.Message}）";
+                job.Notification.Text = Get(SayobotString.Failed, setId,
+                    SayobotErrors.Describe(e, Volatile.Read(ref job.ImportStarted) != 0));
                 job.Notification.State = ProgressNotificationState.Cancelled;
-                notify(fallback ? $"Sayobot 下載失敗，改用官方下載：{setId}" : $"Sayobot 下載或匯入失敗：{setId}。詳見 runtime 日誌。");
+                notify(Get(fallback ? SayobotString.FallingBack : SayobotString.FailureDetails, setId));
             });
         }
         finally
@@ -241,7 +242,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
             if (attempt < 20)
                 Scheduler.AddDelayed(() => queueOfficialFallback(job, attempt + 1), 100);
             else
-                notify($"官方下載仍在清理，請手動重試譜面集 {setId}。");
+                notify(Get(SayobotString.OfficialCleanupPending, setId));
             return;
         }
 
@@ -257,7 +258,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
         {
             officialFallbacks.Remove(setId);
             Logger.Error(e, $"Sayobot Download: could not start official fallback for {setId}.");
-            notify($"無法啟動官方下載，請手動重試譜面集 {setId}。");
+            notify(Get(SayobotString.OfficialStartFailed, setId));
         }
     }
 
@@ -267,7 +268,7 @@ internal sealed partial class SayobotDownloadComponent(SayobotRuleset ruleset) :
             Schedule(() => { if (!disposed) action(); });
     }
 
-    private void notify(string message) => notifications?.Post(new SimpleNotification { Text = message });
+    private void notify(LocalisableString message) => notifications?.Post(new SimpleNotification { Text = message });
 
     private static bool isMd5(string? hash)
         => hash is { Length: 32 } && hash.All(Uri.IsHexDigit);

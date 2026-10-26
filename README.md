@@ -1,6 +1,6 @@
 # Sayobot Download ruleset 原型
 
-以 **osu!lazer 2026.1005.0 正式版**為目標的譜面下載原型。所有下載和匯入都在 osu! 行程內執行；沒有 `System.Reflection`、`UnsafeAccessor`、Harmony、程序注入或外部下載程式。
+以 **osu!lazer 2026.1005.0 正式版**為目標的譜面下載原型，目前版本 **0.2.0**。所有下載和匯入都在 osu! 行程內執行；沒有反射讀寫／呼叫遊戲成員、`UnsafeAccessor`、Harmony、程序注入或外部下載程式。
 
 ## 安裝及試用
 
@@ -15,6 +15,12 @@
 預設啟用接管、使用無影片包、下載失敗時回退官方；Sayobot 預設直接連線，不依賴系統代理。同時最多傳輸兩個譜面集。
 
 移除 DLL 並重啟即可解除安裝。設定中的接管開關只影響新請求；進行中的工作可在通知列取消。
+
+## 介面語言
+
+支援 **繁體中文、簡體中文、English、日本語**，自動跟隨 lazer 的語言設定，切換後不需重啟。設定標題、說明、輸入提示、下載／匯入進度、通知及錯誤說明均已翻譯；其他語言使用英文，數值格式仍跟隨遊戲語系。
+
+繁體中文支援 `zh-Hant`、台灣／香港／澳門語系；簡體中文支援 `zh`、`zh-Hans`。使用公開的 `ILocalisableStringData`／`LocalisableFormattableString` 介面，翻譯直接編入 DLL，不需額外語言檔或外部程式。錯誤通知提供翻譯後的原因，runtime 日誌保留原始例外以便診斷。
 
 ## 原型範圍
 
@@ -55,6 +61,12 @@ dotnet build osu.Game.Rulesets.Sayobot/osu.Game.Rulesets.Sayobot.csproj -c Relea
 
 ```sh
 dotnet run --project tests/Sayobot.Tests -c Release
+```
+
+本地化測試（使用正式版框架組件，不啟動遊戲或連線）：
+
+```sh
+dotnet run --project tests/Sayobot.LocalisationTests -c Release
 ```
 
 加上一次實際 Sayobot 下載（譜面集 `41823`，約 2.87 MB；測完刪除暫存檔）：

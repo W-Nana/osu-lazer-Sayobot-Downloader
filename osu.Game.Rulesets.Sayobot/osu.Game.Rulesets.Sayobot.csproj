@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>osu.Game.Rulesets.Sayobot</AssemblyName>
     <RootNamespace>osu.Game.Rulesets.Sayobot</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <PpyOsuGameVersion Condition="'$(PpyOsuGameVersion)' == ''">2026.916.0</PpyOsuGameVersion>
     <LazerReferenceDirectory Condition="'$(LazerReferenceDirectory)' == ''">$(MSBuildThisFileDirectory)../.tools/lazer-2026.1005.0/usr/bin</LazerReferenceDirectory>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
